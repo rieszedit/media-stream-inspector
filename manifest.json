@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Media Stream Inspector",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Detect and download HTML5 media streams (HLS/MP4) from web pages.",
   "permissions": [
     "activeTab",

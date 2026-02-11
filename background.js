@@ -136,6 +136,7 @@ chrome.webNavigation.onBeforeNavigate.addListener((d) => {
         },
         condition: {
           urlFilter: '*',
+          excludedInitiatorDomains: ['youtube.com', 'x.com', 'twitter.com'],
           resourceTypes: ['xmlhttprequest', 'media', 'other']
         }
       }]
