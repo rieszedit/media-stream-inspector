@@ -1,0 +1,20 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Extension specific
+*.zip
+*.pem
+_metadata/
+
+# Gemini/Claude specific
+.gemini/
+.claude/
+brain/
+implementation_plan.md
+task.md
+walkthrough.md
