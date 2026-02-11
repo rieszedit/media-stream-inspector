@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Media Stream Inspector",
   "version": "2.0.0",
-  "description": "Professional utility for analyzing and downloading HTML5 media streams including HLS and MP4.",
+  "description": "Detect and download HTML5 media streams (HLS/MP4) from web pages.",
   "permissions": [
     "activeTab",
     "downloads",
@@ -14,7 +14,9 @@
     "notifications",
     "alarms"
   ],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "declarative_net_request": {
     "rule_resources": [
       {
@@ -37,14 +39,18 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "<all_urls>"
+      ],
       "exclude_matches": [
         "*://*.youtube.com/*",
         "*://*.x.com/*",
         "*://*.twitter.com/*",
         "*://*.x.co/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_end"
     }
   ],

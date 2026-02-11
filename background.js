@@ -1,12 +1,11 @@
 /**
- * Background Service Worker v2.0.0
+ * Background Service Worker v2.1.0
  * - Proper URL throttling (per-URL map, not single variable)
- * - TokyoMotion / site-specific download support
  * - Download history persistence (chrome.storage.local)
  * - Service Worker keep-alive via alarms
  * - Notification-based progress when popup is closed
  * - Filename extraction from Content-Disposition / URL
- * - MIME type enforcement for downloads
+ * - Fetch-based download via offscreen document
  */
 
 // ---- State ----
@@ -26,30 +25,10 @@ function isExcluded(url) {
   return /youtube\.com|x\.com|twitter\.com/i.test(url);
 }
 
-// ---- Site-specific configuration ----
-function getSiteConfig(url) {
-  if (!url) return {};
-  try {
-    const hostname = new URL(url).hostname;
-
-    if (/tokyomotion/i.test(hostname)) {
-      return {
-        forceReferer: true,
-        forceMimeType: 'video/mp4',
-        fileExtension: '.mp4',
-        customHeaders: { 'Accept': 'video/mp4,video/*;q=0.9,*/*;q=0.8' }
-      };
-    }
-
-    if (/pornhub/i.test(hostname)) {
-      return { forceReferer: true, fileExtension: '.mp4' };
-    }
-
-    if (/candfans|cien/i.test(hostname)) {
-      return { forceReferer: true };
-    }
-  } catch (e) { /* invalid URL */ }
-  return {};
+// ---- Filename Utilities ----
+function ensureMediaExtension(filename) {
+  if (/\.(mp4|webm|mkv|avi|flv|m4v)$/i.test(filename)) return filename;
+  return filename.replace(/\.[^.]+$/, '.mp4');
 }
 
 // ---- Media Storage with Priority ----
@@ -305,20 +284,17 @@ chrome.runtime.onMessage.addListener((m, sender, sendResponse) => {
   if (m.action === 'startHlsDownload') {
     (async () => {
       await ensureOffscreen();
-      // Get site config for the tab
       let pageUrl = '';
       try {
         const tab = await chrome.tabs.get(m.tabId);
         pageUrl = tab.url;
       } catch (e) { /* ignore */ }
 
-      const siteConfig = getSiteConfig(pageUrl);
       chrome.runtime.sendMessage({
         action: 'executeUltimateDownload',
         url: m.url,
         tabId: m.tabId,
-        pageUrl,
-        siteConfig
+        pageUrl
       });
     })();
     return true;
@@ -327,48 +303,19 @@ chrome.runtime.onMessage.addListener((m, sender, sendResponse) => {
   if (m.action === 'startDirectDownload') {
     (async () => {
       try {
-        // Get page URL for referer
         let pageUrl = '';
         try {
           const tab = await chrome.tabs.get(m.tabId);
           pageUrl = tab.url;
         } catch (e) { /* ignore */ }
 
-        const siteConfig = getSiteConfig(pageUrl);
         const urlFilename = extractFilename(m.url);
-        const ext = siteConfig.fileExtension || '.mp4';
-        let filename = urlFilename || `direct_${Date.now()}${ext}`;
+        let filename = urlFilename || `direct_${Date.now()}.mp4`;
+        filename = ensureMediaExtension(filename);
 
-        // Ensure correct file extension (e.g., fix .htm -> .mp4)
-        if (siteConfig.fileExtension && !filename.endsWith(siteConfig.fileExtension)) {
-          filename = filename.replace(/\.[^.]+$/, siteConfig.fileExtension);
-        }
-
-        // Sites requiring Referer: skip chrome.downloads (can't set Referer)
-        // and go directly to fetch-based download via offscreen document
-        if (siteConfig.forceReferer) {
-          fetchBasedDownload(m.url, filename, m.tabId, pageUrl, siteConfig);
-          return;
-        }
-
-        chrome.downloads.download({
-          url: m.url,
-          filename,
-          saveAs: true
-        }, (downloadId) => {
-          if (chrome.runtime.lastError) {
-            console.error('Direct download failed:', chrome.runtime.lastError.message);
-            // Fallback: try fetch-based download
-            fetchBasedDownload(m.url, filename, m.tabId, pageUrl, siteConfig);
-          } else {
-            activeDownloads.set(downloadId, {
-              url: m.url,
-              tabId: m.tabId,
-              filename,
-              status: 'downloading'
-            });
-          }
-        });
+        // Use fetch-based download via offscreen document
+        // This ensures declarativeNetRequest rules inject proper headers
+        fetchBasedDownload(m.url, filename, m.tabId, pageUrl);
       } catch (e) {
         console.error('Direct download error:', e);
       }
@@ -426,9 +373,9 @@ chrome.runtime.onMessage.addListener((m, sender, sendResponse) => {
   return true;
 });
 
-// ---- Fetch-based Download Fallback ----
-// For sites where chrome.downloads.download fails (CORS, Content-Type issues)
-async function fetchBasedDownload(url, filename, tabId, pageUrl, siteConfig) {
+// ---- Fetch-based Download ----
+// Downloads via offscreen document where declarativeNetRequest rules apply
+async function fetchBasedDownload(url, filename, tabId, pageUrl) {
   try {
     await ensureOffscreen();
     chrome.runtime.sendMessage({
@@ -436,8 +383,7 @@ async function fetchBasedDownload(url, filename, tabId, pageUrl, siteConfig) {
       url,
       filename,
       tabId,
-      pageUrl,
-      siteConfig
+      pageUrl
     });
   } catch (e) {
     console.error('Fetch-based download failed:', e);

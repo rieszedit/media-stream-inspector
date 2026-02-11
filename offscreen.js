@@ -129,7 +129,7 @@ async function fetchWithRetry(url, retries = MAX_RETRIES) {
 }
 
 // ---- Main HLS Download Handler ----
-async function executeHlsDownload(url, tabId, pageUrl, siteConfig) {
+async function executeHlsDownload(url, tabId, pageUrl) {
   const report = (msg, prog = null) => {
     chrome.runtime.sendMessage({
       action: 'downloadProgress',
@@ -143,15 +143,7 @@ async function executeHlsDownload(url, tabId, pageUrl, siteConfig) {
   try {
     report('Fetching playlist...', 0);
 
-    // Fetch with site-specific headers
-    const fetchOpts = {};
-    if (siteConfig?.forceReferer && pageUrl) {
-      fetchOpts.headers = {
-        'Referer': new URL(pageUrl).origin + '/'
-      };
-    }
-
-    let res = await fetch(url, fetchOpts);
+    let res = await fetch(url);
     if (!res.ok) throw new Error(`Playlist fetch failed: ${res.status}`);
     let text = await res.text();
     let currentUrl = url;
@@ -164,7 +156,7 @@ async function executeHlsDownload(url, tabId, pageUrl, siteConfig) {
       report(`Selected: ${best.resolution} (${Math.round(best.bandwidth / 1000)}kbps)`, 2);
 
       currentUrl = best.url;
-      res = await fetch(currentUrl, fetchOpts);
+      res = await fetch(currentUrl);
       if (!res.ok) throw new Error(`Variant playlist fetch failed: ${res.status}`);
       text = await res.text();
       parsed = parseM3u8(text, currentUrl);
@@ -181,7 +173,7 @@ async function executeHlsDownload(url, tabId, pageUrl, siteConfig) {
     let globalIV = null;
     if (parsed.encryption && parsed.encryption.method === 'AES-128') {
       report('Fetching encryption key...');
-      const keyRes = await fetch(parsed.encryption.keyUrl, fetchOpts);
+      const keyRes = await fetch(parsed.encryption.keyUrl);
       if (!keyRes.ok) throw new Error(`Key fetch failed: ${keyRes.status}`);
       const keyData = await keyRes.arrayBuffer();
       cryptoKey = await importAesKey(keyData);
@@ -282,7 +274,7 @@ async function executeHlsDownload(url, tabId, pageUrl, siteConfig) {
 }
 
 // ---- Fetch-based Direct Download ----
-async function executeFetchDownload(url, filename, tabId, pageUrl, siteConfig) {
+async function executeFetchDownload(url, filename, tabId, pageUrl) {
   const report = (msg, prog = null) => {
     chrome.runtime.sendMessage({
       action: 'downloadProgress',
@@ -296,15 +288,7 @@ async function executeFetchDownload(url, filename, tabId, pageUrl, siteConfig) {
   try {
     report('Starting download...', 0);
 
-    const headers = {};
-    if (siteConfig?.forceReferer && pageUrl) {
-      headers['Referer'] = new URL(pageUrl).origin + '/';
-    }
-    if (siteConfig?.customHeaders) {
-      Object.assign(headers, siteConfig.customHeaders);
-    }
-
-    const res = await fetch(url, { headers });
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const contentLength = parseInt(res.headers.get('Content-Length') || '0');
@@ -335,8 +319,7 @@ async function executeFetchDownload(url, filename, tabId, pageUrl, siteConfig) {
 
     report('Finalizing...', 98);
 
-    const mimeType = siteConfig?.forceMimeType || 'video/mp4';
-    const blob = new Blob(chunks, { type: mimeType });
+    const blob = new Blob(chunks, { type: 'video/mp4' });
     const blobUrl = URL.createObjectURL(blob);
 
     chrome.runtime.sendMessage({
@@ -362,10 +345,10 @@ async function executeFetchDownload(url, filename, tabId, pageUrl, siteConfig) {
 // ---- Message Handler ----
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === 'executeUltimateDownload') {
-    executeHlsDownload(request.url, request.tabId, request.pageUrl, request.siteConfig);
+    executeHlsDownload(request.url, request.tabId, request.pageUrl);
   }
 
   if (request.action === 'executeFetchDownload') {
-    executeFetchDownload(request.url, request.filename, request.tabId, request.pageUrl, request.siteConfig);
+    executeFetchDownload(request.url, request.filename, request.tabId, request.pageUrl);
   }
 });

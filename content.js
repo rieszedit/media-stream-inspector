@@ -1,9 +1,9 @@
 /**
- * Content Script v2.0.0
- * - Throttled MutationObserver (16ms minimum interval)
+ * Content Script v2.1.0
+ * - Throttled MutationObserver
  * - WeakRef for DOM element tracking (prevents memory leaks)
- * - SPA navigation support (YouTube yt-navigate-finish, popstate, etc.)
- * - <source> tag and blob URL detection
+ * - SPA navigation support (popstate, hashchange, URL polling)
+ * - <source> tag detection
  * - requestIdleCallback for non-blocking DOM scans
  */
 (() => {
@@ -118,62 +118,9 @@
     return media;
   }
 
-  // ---- Network Interception ----
-  // Intercept fetch/XHR to detect dynamically loaded m3u8/mp4 URLs
-  function interceptNetworkRequests() {
-    // Intercept fetch
-    const originalFetch = window.fetch;
-    window.fetch = function (...args) {
-      try {
-        const url = typeof args[0] === 'string' ? args[0] : args[0]?.url;
-        if (url && typeof url === 'string') {
-          checkAndReportUrl(url);
-        }
-      } catch (e) { /* ignore */ }
-      return originalFetch.apply(this, args);
-    };
-
-    // Intercept XMLHttpRequest
-    const originalOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-      try {
-        if (url && typeof url === 'string') {
-          checkAndReportUrl(url);
-        }
-      } catch (e) { /* ignore */ }
-      return originalOpen.call(this, method, url, ...rest);
-    };
-  }
-
-  function checkAndReportUrl(url) {
-    if (knownUrls.has(url)) return;
-    // Only report media URLs
-    if (!/\.(m3u8|mp4|webm)(\?|$|#)/i.test(url)) return;
-    // Skip segments
-    if (/\.(ts|m4s)(\?|$)/i.test(url)) return;
-
-    knownUrls.add(url);
-
-    let priority = 10;
-    if (/master/i.test(url)) priority += 30;
-    else if (url.includes('.m3u8')) priority += 20;
-    if (/1080|1920/i.test(url)) priority += 15;
-    else if (/720/i.test(url)) priority += 10;
-    else if (/480/i.test(url)) priority += 5;
-
-    sendMedia([{
-      url,
-      type: getMediaType(url),
-      priority,
-      width: 0,
-      height: 0
-    }]);
-  }
-
   // ---- Communication ----
   function sendMedia(mediaList) {
     if (!mediaList.length) return;
-    // Limit to prevent flooding
     const toSend = mediaList.slice(0, MAX_MEDIA_ITEMS);
     try {
       chrome.runtime.sendMessage({
@@ -181,7 +128,7 @@
         media: toSend
       });
     } catch (e) {
-      // Extension context invalidated (e.g., extension updated)
+      // Extension context invalidated
     }
   }
 
@@ -225,12 +172,6 @@
 
   // ---- SPA Navigation Support ----
   function setupSpaListeners() {
-    // YouTube SPA navigation
-    window.addEventListener('yt-navigate-finish', () => {
-      knownUrls.clear();
-      scheduleScan();
-    });
-
     // Generic SPA: popstate, hashchange
     window.addEventListener('popstate', () => {
       knownUrls.clear();
@@ -272,9 +213,6 @@
 
     // SPA support
     setupSpaListeners();
-
-    // Network interception for dynamic media loading
-    interceptNetworkRequests();
   }
 
   init();
