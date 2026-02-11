@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg: #0b0e11;
+      --card: #15191c;
+      --text: #ffffff;
+      --subtext: #8b98a5;
+      --primary: #1d9bf0;
+      --accent: #00ba7c;
+      --border: #2f3336;
+      --error: #ff4444;
+    }
+    body {
+      width: 380px; margin: 0; padding: 16px;
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      overflow-x: hidden;
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 16px; margin: 0; font-weight: 700; letter-spacing: 0.5px; }
+    .status-badge {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10px; background: rgba(0, 186, 124, 0.15);
+      color: var(--accent); padding: 4px 10px; border-radius: 20px; font-weight: 800;
+    }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .media-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; margin-bottom: 12px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .media-card:hover { border-color: var(--primary); background: #1a1e23; }
+    .card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .type-icon {
+      color: var(--primary);
+      width: 32px; height: 32px; display: flex;
+      align-items: center; justify-content: center;
+      background: rgba(29, 155, 240, 0.1); border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .info { flex: 1; margin-left: 12px; }
+    .title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+    .meta { font-size: 11px; color: var(--subtext); }
+    .url-preview {
+      font-size: 10px; color: var(--subtext); margin-bottom: 12px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      padding: 4px 8px; background: rgba(255,255,255,0.03); border-radius: 4px;
+    }
+    .icon { display: inline-flex; align-items: center; vertical-align: middle; }
+    .icon svg { vertical-align: middle; }
+
+    .actions { display: flex; gap: 10px; }
+    button {
+      flex: 1; height: 38px; border-radius: 8px; border: none;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-main { background: var(--primary); color: white; }
+    .btn-side { background: var(--border); color: var(--text); max-width: 50px; }
+    button:hover { filter: brightness(1.1); }
+    button:disabled { opacity: 0.6; cursor: wait; }
+
+    .progress-wrap {
+      height: 3px; background: #000; border-radius: 2px;
+      margin-top: 12px; display: none; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--primary); width: 0%;
+      transition: width 0.3s;
+    }
+    .progress-fill.indeterminate {
+      width: 30% !important;
+      animation: indeterminate 1.5s ease-in-out infinite;
+    }
+    @keyframes indeterminate {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(400%); }
+    }
+    .log-msg {
+      font-size: 10px; color: var(--primary);
+      margin-top: 8px; text-align: center; display: none;
+    }
+
+    .empty {
+      text-align: center; padding: 40px 0;
+      color: var(--subtext); font-size: 13px;
+    }
+    .empty svg { margin-bottom: 10px; display: block; margin: 0 auto 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MEDIA STREAM INSPECTOR</h1>
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      ACTIVE
+    </div>
+  </header>
+
+  <div id="media-list">
+    <div class="empty">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8b98a5" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="M21 21l-4.35-4.35"/>
+      </svg>
+      Monitoring for media streams...
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
