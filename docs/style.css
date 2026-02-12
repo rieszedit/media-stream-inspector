@@ -159,6 +159,7 @@ nav {
 .text-gradient {
     background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -345,4 +346,23 @@ footer {
     .cta-card h2 {
         font-size: 2rem;
     }
+}
+
+/* Orynth Badge */
+.orynth-badge {
+    margin-top: 3rem;
+    display: flex;
+    justify-content: center;
+    opacity: 0.8;
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.orynth-badge:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+.orynth-badge img {
+    max-width: 100%;
+    height: auto;
 }

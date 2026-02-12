@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm install:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "mcp__plugin_playwright_playwright__browser_navigate"
     ]
   }
 }
